@@ -1,5 +1,4 @@
-﻿# app/auth.py
-from datetime import datetime, timedelta
+﻿from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
 from .config import SECRET_KEY, JWT_ALGORITHM, JWT_EXP_MIN
@@ -16,17 +15,14 @@ pwd_context = CryptContext(
 def hash_password(password: str) -> str:
     """
     Hash a password using Argon2
-    No length restrictions like bcrypt
     """
     try:
-        hashed = pwd_context.hash(password)
-        print(f"DEBUG: Password hashed successfully (length: {len(hashed)})")
-        return hashed
+        return pwd_context.hash(password)
     except Exception as e:
         print(f"DEBUG: Hash error: {e}")
-        # Fallback to simple SHA256 if Argon2 fails
+        # Fallback to SHA256 if Argon2 fails
         import hashlib
-        return hashlib.sha256(password.encode('utf-8')).hexdigest()
+        return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 def verify_password(password: str, hashed: str) -> bool:
     """
@@ -34,10 +30,9 @@ def verify_password(password: str, hashed: str) -> bool:
     """
     try:
         return pwd_context.verify(password, hashed)
-    except:
-        # Fallback to SHA256 verification
+    except Exception:
         import hashlib
-        return hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed
+        return hashlib.sha256(password.encode("utf-8")).hexdigest() == hashed
 
 def create_token(user_id: int) -> str:
     """
@@ -49,13 +44,3 @@ def create_token(user_id: int) -> str:
         "iat": datetime.utcnow(),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=JWT_ALGORITHM)
-
-# Test function (optional)
-if __name__ == "__main__":
-    # Test the hashing
-    test_password = "password123"
-    print(f"Testing with password: {test_password}")
-    hashed = hash_password(test_password)
-    print(f"Hashed: {hashed}")
-    print(f"Verify: {verify_password(test_password, hashed)}")
-    print(f"Verify wrong: {verify_password('wrong', hashed)}")

@@ -1,4 +1,4 @@
-# app/routers/login.py - PostgreSQL version
+# app/routers/login.py - PostgreSQL version (email-based login)
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from ..schemas import LoginRequest, LoginResponse
@@ -10,8 +10,8 @@ router = APIRouter(prefix="/login", tags=["login"])
 
 @router.post("", response_model=LoginResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    # Find user by username
-    user = db.query(User).filter(User.username == payload.username).first()
+    # Find user by email (instead of username)
+    user = db.query(User).filter(User.email == payload.email).first()
     
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")

@@ -5,11 +5,6 @@ from datetime import datetime
 from .routers.signup import router as signup_router
 from .routers.login import router as login_router
 from .routers.password_reset import router as password_reset_router
-from .db import engine
-from .models import Base
-
-# Create tables automatically
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="FYP Auth API",

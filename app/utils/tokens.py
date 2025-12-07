@@ -1,3 +1,4 @@
+# app/utils/tokens.py
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -6,13 +7,13 @@ from ..config import SECRET_KEY, JWT_ALGORITHM
 
 def generate_reset_token() -> str:
     """
-    6-digit numeric token (e.g., for mobile code)
+    6-digit numeric token for mobile apps
     """
     return ''.join(secrets.choice(string.digits) for _ in range(6))
 
 def generate_jwt_reset_token(user_id: int, email: str, expires_minutes: int = 15) -> str:
     """
-    JWT for password reset, default 15 minutes
+    JWT for password reset (15 minutes expiry)
     """
     now = datetime.now(timezone.utc)
     payload = {

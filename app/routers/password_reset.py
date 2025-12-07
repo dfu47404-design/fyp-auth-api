@@ -1,7 +1,6 @@
-# app/routers/password_reset.py
+# app/routers/password_reset.py - COMPATIBLE VERSION
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
 
 from ..db import get_db
@@ -9,28 +8,9 @@ from ..models import User
 from ..auth import hash_password, verify_password
 from ..email_service import email_service
 from ..utils.tokens import generate_reset_token, generate_jwt_reset_token, verify_reset_token
+from ..schemas import ResetPasswordRequest, ForgotPasswordRequest, VerifyResetTokenRequest
 
 router = APIRouter(prefix="/password", tags=["password-reset"])
-
-# ============ SCHEMAS ============
-
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
-
-class VerifyResetTokenRequest(BaseModel):
-    email: EmailStr
-    token: str = Field(min_length=6, max_length=6)
-
-class ResetPasswordRequest(BaseModel):
-    token: str  # JWT token from verify step
-    new_password: str = Field(min_length=6)
-    confirm_password: str = Field(min_length=6)
-    
-    def validate_passwords(self):
-        if self.new_password != self.confirm_password:
-            raise ValueError("Passwords do not match")
-
-# ============ ENDPOINTS ============
 
 @router.post("/forgot")
 async def forgot_password(
@@ -40,14 +20,10 @@ async def forgot_password(
 ):
     """
     Step 1: Request password reset
-    - User provides email
-    - Generate reset token
-    - Send token via email
-    - Store token hash in database
     """
     
     # Find user by email
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.email == request.email.lower().strip()).first()
     
     if not user:
         # For security, don't reveal if user exists
@@ -56,17 +32,19 @@ async def forgot_password(
             "status": "success"
         }
     
-    # Generate reset token (6-digit code for mobile)
+    # Generate 6-digit reset token
     reset_token = generate_reset_token()
-    
-    # Generate JWT token for verification
-    jwt_token = generate_jwt_reset_token(user.id, user.email)
     
     # Store token hash in database (not the plain token)
     token_hash = hash_password(reset_token)
     user.reset_token = token_hash
     user.reset_token_expiry = datetime.utcnow() + timedelta(minutes=15)
-    db.commit()
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
     
     # Send email in background (non-blocking)
     background_tasks.add_task(
@@ -89,20 +67,27 @@ async def verify_reset_code(
 ):
     """
     Step 2: Verify reset token
-    - User provides email and 6-digit code
-    - Verify code matches and is not expired
-    - Return JWT token for password reset
     """
     
     # Find user
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.email == request.email.lower().strip()).first()
     
-    if not user or not user.reset_token:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    
+    if not user.reset_token:
+        raise HTTPException(status_code=400, detail="No reset token found. Please request a new one.")
     
     # Check if token expired
-    if not user.reset_token_expiry or user.reset_token_expiry < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Reset code has expired")
+    if not user.reset_token_expiry:
+        raise HTTPException(status_code=400, detail="Reset token has no expiry time")
+    
+    if user.reset_token_expiry < datetime.utcnow():
+        # Clear expired token
+        user.reset_token = None
+        user.reset_token_expiry = None
+        db.commit()
+        raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
     
     # Verify token
     if not verify_password(request.token, user.reset_token):
@@ -114,12 +99,18 @@ async def verify_reset_code(
     # Clear the one-time code after successful verification
     user.reset_token = None
     user.reset_token_expiry = None
-    db.commit()
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
     
     return {
         "message": "Reset code verified successfully",
         "reset_token": jwt_token,  # JWT token for next step
         "user_id": user.id,
+        "expires_in": "15 minutes",
         "status": "success"
     }
 
@@ -130,9 +121,6 @@ async def reset_password(
 ):
     """
     Step 3: Reset password with JWT token
-    - User provides JWT token and new password
-    - Verify JWT token
-    - Update password
     """
     
     # Validate passwords match
@@ -147,11 +135,14 @@ async def reset_password(
     user_id = int(payload.get("sub"))
     email = payload.get("email")
     
+    # Verify email matches
+    if email.lower().strip() != request.email.lower().strip():
+        raise HTTPException(status_code=400, detail="Email does not match reset token")
+    
     # Find user
     user = db.query(User).filter(
         User.id == user_id,
-        User.email == email,
-        User.is_active == True
+        User.email == email.lower().strip()
     ).first()
     
     if not user:
@@ -164,7 +155,11 @@ async def reset_password(
     user.reset_token = None
     user.reset_token_expiry = None
     
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
     
     return {
         "message": "Password reset successful. You can now login with your new password.",
