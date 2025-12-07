@@ -2,7 +2,7 @@ import secrets
 import string
 from datetime import datetime, timedelta, timezone
 import jwt
-from config import SECRET_KEY, JWT_ALGORITHM
+from ..config import SECRET_KEY, JWT_ALGORITHM
 
 def generate_reset_token() -> str:
     """
