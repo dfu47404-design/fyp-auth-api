@@ -25,7 +25,7 @@ class SignupInfoUpdate(BaseModel):
     user_id: int
     age: int = Field(..., ge=13, le=80)
     weight: float = Field(..., ge=30, le=150)
-    foot_size: float = Field(..., ge=30, le=55)
+    foot_size: float = Field(..., ge=24.5, le=29.6)
     purpose: str = Field(..., min_length=3, max_length=50)
 
 class LoginRequest(BaseModel):
