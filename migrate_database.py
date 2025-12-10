@@ -1,7 +1,7 @@
-# migrate_database.py - FIXED FOR SQLALCHEMY 2.0
+# migrate_database.py - UPDATED FOR SQLALCHEMY 1.4.50
+from sqlalchemy import text, inspect
 from app.db import engine
 from app.models import Base
-import sqlalchemy as sa
 
 print('=' * 60)
 print('DATABASE MIGRATION FOR PASSWORD RESET')
@@ -9,8 +9,8 @@ print('=' * 60)
 
 try:
     # First, let's check current columns
-    with engine.begin() as conn:  # Use engine.begin() for auto-commit
-        inspector = sa.inspect(engine)
+    with engine.connect() as conn:
+        inspector = inspect(engine)
         
         # Check if users table exists
         if not inspector.has_table('users'):
@@ -33,26 +33,29 @@ try:
                 # Add missing columns one by one
                 if 'reset_token' not in column_names:
                     print("Adding 'reset_token' column...")
-                    conn.execute(sa.text("ALTER TABLE users ADD COLUMN reset_token VARCHAR(255)"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_token VARCHAR(255)"))
+                    conn.commit()
                     print("✅ Added 'reset_token' column")
                 
                 if 'reset_token_expiry' not in column_names:
                     print("Adding 'reset_token_expiry' column...")
-                    conn.execute(sa.text("ALTER TABLE users ADD COLUMN reset_token_expiry TIMESTAMP"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_expiry TIMESTAMP"))
+                    conn.commit()
                     print("✅ Added 'reset_token_expiry' column")
                 
                 if 'is_active' not in column_names:
                     print("Adding 'is_active' column...")
-                    conn.execute(sa.text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true"))
+                    conn.commit()
                     print("✅ Added 'is_active' column")
                 
                 if 'updated_at' not in column_names:
                     print("Adding 'updated_at' column...")
-                    conn.execute(sa.text("ALTER TABLE users ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE"))
+                    conn.commit()
                     print("✅ Added 'updated_at' column")
                 
-                print("\n✅ Migration completed successfully!")
-                print(f"✅ Added {len(missing_columns)} columns to users table")
+                print(f"\n✅ Migration completed! Added {len(missing_columns)} columns")
             else:
                 print("✅ All required columns already exist!")
     

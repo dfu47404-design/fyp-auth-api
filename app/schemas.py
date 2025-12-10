@@ -1,4 +1,6 @@
-﻿from pydantic import BaseModel, EmailStr, Field, validator
+﻿# app/schemas.py
+from pydantic import BaseModel, EmailStr, Field, validator
+from typing import Optional
 
 # -------------------------------
 # Signup & Login Schemas
@@ -12,7 +14,7 @@ class SignupRequest(BaseModel):
     confirm_password: str = Field(..., min_length=6, max_length=100)
 
     @validator("confirm_password")
-    def passwords_match(cls, v, values):
+    def passwords_match(cls, v, values, **kwargs):
         if "password" in values and v != values["password"]:
             raise ValueError("Passwords do not match")
         return v
@@ -62,7 +64,7 @@ class ResetPasswordRequest(BaseModel):
     confirm_password: str = Field(..., min_length=6, max_length=100)
 
     @validator("confirm_password")
-    def passwords_match(cls, v, values):
+    def passwords_match(cls, v, values, **kwargs):
         if "new_password" in values and v != values["new_password"]:
             raise ValueError("Passwords do not match")
         return v

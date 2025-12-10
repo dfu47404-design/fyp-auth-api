@@ -1,86 +1,68 @@
-
+# app/email_service.py - SIMPLIFIED
 import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
-        # For production, use environment variables
+        # Get environment variables
         self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
         self.smtp_username = os.getenv("SMTP_USERNAME", "")
         self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.from_email = os.getenv("FROM_EMAIL", "noreply@yourapp.com")
+        self.from_email = os.getenv("FROM_EMAIL", "")
+        
+        logger.info("=" * 50)
+        logger.info("EMAIL SERVICE INITIALIZATION")
+        logger.info(f"SMTP Server: {self.smtp_server}:{self.smtp_port}")
+        logger.info(f"Username: {'SET' if self.smtp_username else 'NOT SET'}")
+        logger.info(f"Password: {'SET' if self.smtp_password else 'NOT SET'}")
+        logger.info(f"From Email: {self.from_email}")
+        logger.info("=" * 50)
     
     def send_password_reset_email(self, to_email: str, reset_token: str, user_name: str) -> bool:
         """
-        Send password reset email with reset token/link
+        Send password reset email with reset token
         """
+        logger.info(f"🔐 Sending reset email to: {to_email}")
+        logger.info(f"📧 Reset Token: {reset_token}")
+        logger.info(f"👤 User: {user_name}")
+        
+        # If email not configured, just log and return success for development
+        if not self.smtp_username or not self.smtp_password:
+            logger.warning("⚠️ Email credentials not configured. Running in DEV MODE.")
+            logger.warning(f"📧 TOKEN for {to_email}: {reset_token}")
+            logger.warning(f"User would receive: Your reset code is {reset_token}")
+            logger.warning("Set SMTP_USERNAME and SMTP_PASSWORD in .env to send real emails")
+            return True
+        
         try:
-            # Reset link (for web interface - Android app will handle differently)
-            reset_link = f"https://your-app.com/reset-password?token={reset_token}"
+            # Create simple email
+            subject = "Password Reset Code - Sure Step App"
             
-            # Email content
-            subject = "Password Reset Request - FYP App"
-            
-            # HTML email template
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background-color: #4CAF50; color: white; padding: 10px; text-align: center; }}
-                    .content {{ padding: 20px; background-color: #f9f9f9; }}
-                    .token {{ background-color: #eee; padding: 10px; font-family: monospace; margin: 10px 0; }}
-                    .button {{ background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-                    .footer {{ margin-top: 20px; font-size: 12px; color: #666; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h2>Password Reset Request</h2>
-                    </div>
-                    <div class="content">
-                        <p>Hello {user_name},</p>
-                        <p>We received a request to reset your password for your FYP App account.</p>
-                        <p>Your password reset token is:</p>
-                        <div class="token"><strong>{reset_token}</strong></div>
-                        <p>Or click the button below to reset your password:</p>
-                        <a href="{reset_link}" class="button">Reset Password</a>
-                        <p>This token will expire in 15 minutes.</p>
-                        <p>If you didn't request a password reset, please ignore this email.</p>
-                        <p>Best regards,<br>FYP App Team</p>
-                    </div>
-                    <div class="footer">
-                        <p>This is an automated message, please do not reply to this email.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            """
-            
-            # Plain text version
+            # Simple text email
             text_content = f"""
             Password Reset Request
             
             Hello {user_name},
             
-            We received a request to reset your password for your FYP App account.
+            You requested a password reset for your Sure Step account.
             
-            Your password reset token is: {reset_token}
+            Your reset code is: {reset_token}
             
-            This token will expire in 15 minutes.
+            This code will expire in 15 minutes.
             
-            If you didn't request a password reset, please ignore this email.
+            If you didn't request this, please ignore this email.
             
-            Best regards,
-            FYP App Team
+            Thanks,
+            Sure Step Team
             """
             
             # Create message
@@ -89,27 +71,42 @@ class EmailService:
             msg["From"] = self.from_email
             msg["To"] = to_email
             
-            # Attach both HTML and plain text
-            msg.attach(MIMEText(text_content, "plain"))
-            msg.attach(MIMEText(html_content, "html"))
+            # Attach text version
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
             
-            # Send email
-            if self.smtp_username and self.smtp_password:
-                # Real SMTP server
-                with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                    server.starttls()
-                    server.login(self.smtp_username, self.smtp_password)
-                    server.send_message(msg)
-            else:
-                # Development: Print token instead of sending email
-                print(f"🔐 DEV MODE: Password reset token for {to_email}: {reset_token}")
-                print(f"📧 Email would be sent with token: {reset_token}")
+            # Try to send email
+            logger.info(f"📤 Connecting to SMTP server: {self.smtp_server}:{self.smtp_port}")
             
+            server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            
+            logger.info("🔑 Logging in to SMTP server...")
+            server.login(self.smtp_username, self.smtp_password)
+            
+            logger.info(f"📨 Sending email to {to_email}...")
+            server.sendmail(self.from_email, [to_email], msg.as_string())
+            server.quit()
+            
+            logger.info(f"✅ Email sent successfully to {to_email}")
             return True
             
         except Exception as e:
-            print(f"Email sending failed: {e}")
+            logger.error(f"❌ Failed to send email: {e}")
+            logger.error(f"📧 Token for {to_email}: {reset_token}")  # Still log the token
             return False
+    
+    def get_configuration_status(self) -> dict:
+        """Return email service configuration status"""
+        return {
+            "configured": bool(self.smtp_username and self.smtp_password),
+            "smtp_server": self.smtp_server,
+            "smtp_port": self.smtp_port,
+            "smtp_username": self.smtp_username[:3] + "***" if self.smtp_username else "NOT SET",
+            "from_email": self.from_email,
+        }
+
 
 # Global instance
 email_service = EmailService()

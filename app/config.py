@@ -1,4 +1,5 @@
-﻿import os
+﻿# app/config.py
+import os
 from dotenv import load_dotenv
 
 # Load .env once

@@ -6,15 +6,11 @@ import jwt
 from ..config import SECRET_KEY, JWT_ALGORITHM
 
 def generate_reset_token() -> str:
-    """
-    6-digit numeric token for mobile apps
-    """
+    """6-digit numeric token for mobile apps"""
     return ''.join(secrets.choice(string.digits) for _ in range(6))
 
 def generate_jwt_reset_token(user_id: int, email: str, expires_minutes: int = 15) -> str:
-    """
-    JWT for password reset (15 minutes expiry)
-    """
+    """JWT for password reset (15 minutes expiry)"""
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(user_id),
@@ -25,10 +21,8 @@ def generate_jwt_reset_token(user_id: int, email: str, expires_minutes: int = 15
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=JWT_ALGORITHM)
 
-def verify_reset_token(token: str) -> dict | None:
-    """
-    Verify and decode JWT reset token
-    """
+def verify_reset_token(token: str):
+    """Verify and decode JWT reset token"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
         if payload.get("type") != "password_reset":
