@@ -1,0 +1,54 @@
+Hostname: dpg-d4pue7c9c44c73b2ie6g-a
+Port: 5432
+Database name: fypdb_jozr
+Username: fypuser
+Password: me9tXj1XwolsOfChIupvOU1OqZQHvwab
+Internal Database URl: postgresql://fypuser:me9tXj1XwolsOfChIupvOU1OqZQHvwab@dpg-d4pue7c9c44c73b2ie6g-a/fypdb_jozr
+External Database URl: postgresql://fypuser:me9tXj1XwolsOfChIupvOU1OqZQHvwab@dpg-d4pue7c9c44c73b2ie6g-a.singapore-postgres.render.com/fypdb_jozr
+PSQL command: PGPASSWORD=me9tXj1XwolsOfChIupvOU1OqZQHvwab psql -h dpg-d4pue7c9c44c73b2ie6g-a.singapore-postgres.render.com -U fypuser fypdb_jozr
+
+
+-----------------------------------------------------------------------------------------------------------------
+
+Tables: [('users',)]
+Users table columns: [('updated_at', 'timestamp with time zone'), ('age', 'integer'), ('weight', 'double precision'), ('foot_size', 'double 
+precision'), ('created_at', 'timestamp with time zone'), ('reset_token_expiry', 'timestamp without time zone'), ('is_active', 'boolean'), ('id', 'integer'), 
+('first_name', 'character varying'), ('last_name', 'character varying'), ('email', 'character varying'), ('username', 'character varying'), 
+('password_hash', 'character varying'), ('reset_token', 'character varying'), 
+('purpose', 'character varying')]
+
+-------------------------------------------------------------------------------------------------------------------
+LOGIN_SIGNUP_API/
+│
+├── .venv/                          # Virtual environment (Python packages)
+│
+├── app/                            # Main application folder
+│   ├── __init__.py                 # App-level init file
+│   │
+│   ├── routers/                    # API route handlers
+│   │   ├── __init__.py             # Router package init
+│   │   ├── login.py                # Login endpoint logic
+│   │   ├── password_reset.py       # Forgot/reset password logic
+│   │   └── signup.py               # Signup and profile info logic
+│   │
+│   ├── utils/                      # Utility modules
+│   │   ├── __init__.py             # Utils package init
+│   │   └── tokens.py               # JWT token generation/verification
+│   │
+│   ├── auth.py                     # Authentication helpers
+│   ├── config.py                   # Environment/config loader
+│   ├── db.py                       # Database connection setup
+│   ├── email_service.py           # Email sending logic
+│   ├── models.py                   # SQLAlchemy models
+│   ├── schemas.py                  # Pydantic schemas for validation
+│
+├── main.py                         # FastAPI entry point (includes routers)
+├── migrate_database.py             # DB migration script
+├── test_cloud_db.py                # Cloud DB connection test
+├── .env                            # Environment variables (DB, JWT, SMTP)
+├── .gitignore                      # Git ignore rules
+└── requirements.txt                # Python dependencies
+|__Porcfile
+|__render.yaml
+
+----------------------------------------------------------------------------------------------------------------

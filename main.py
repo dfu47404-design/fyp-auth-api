@@ -1,6 +1,8 @@
-﻿# main.py - UPDATED
+﻿# main.py - UPDATED WITH SMTP TEST ENDPOINT
 import os
 import sys
+import asyncio
+import socket
 
 # Add current directory to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,24 +37,19 @@ app.add_middleware(
 
 # Try to import routers with better error handling
 try:
-    # Try relative import first
     try:
         from app.routers import signup, login, password_reset
     except ImportError:
-        # Try absolute import
         from app.routers import signup, login, password_reset
     
-    # Include routers
     app.include_router(signup.router, prefix="/api")
     app.include_router(login.router, prefix="/api")
     app.include_router(password_reset.router, prefix="/api")
     
     print("✅ All routers imported successfully")
-    
+
 except ImportError as e:
     print(f"❌ Router import error: {e}")
-    
-    # Create minimal test endpoints
     from fastapi import APIRouter
     
     test_router = APIRouter()
@@ -70,8 +67,9 @@ except ImportError as e:
         return {"message": "Test login - routers not loaded", "status": "test"}
     
     app.include_router(test_router, prefix="/api")
-    print("⚠️  Using test router mode")
+    print("⚠️ Using test router mode")
 
+# ✅ ROOT ENDPOINT
 @app.get("/")
 async def root():
     return {
@@ -86,21 +84,46 @@ async def root():
             "verify_reset": "POST /api/password/verify-token",
             "reset_password": "POST /api/password/reset",
             "health_check": "GET /health",
+            "smtp_test": "GET /test-smtp",
             "docs": "GET /docs",
             "redoc": "GET /redoc"
         }
     }
 
+# ✅ HEALTH CHECK
 @app.get("/health")
 async def health_check():
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "Sure Step Auth API",
         "version": "1.0.0"
     }
 
-# Error handler
+# ✅ ✅ SMTP TEST ENDPOINT (NEW)
+@app.get("/test-smtp")
+async def test_smtp_connection():
+    """Test if SMTP ports are accessible from Render"""
+    results = []
+
+    ports_to_test = [
+        ("smtp.gmail.com", 587, "Gmail TLS"),
+        ("smtp.gmail.com", 465, "Gmail SSL"),
+        ("smtp.sendgrid.net", 587, "SendGrid"),
+    ]
+
+    for host, port, description in ports_to_test:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.close()
+            await writer.wait_closed()
+            results.append(f"✅ {description} ({host}:{port}) - ACCESSIBLE")
+        except Exception as e:
+            results.append(f"❌ {description} ({host}:{port}) - BLOCKED: {e}")
+
+    return {"smtp_test": results}
+
+# ✅ GLOBAL ERROR HANDLER
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
@@ -112,6 +135,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+# ✅ LOCAL DEV SERVER
 if __name__ == "__main__":
     import uvicorn
     
@@ -122,9 +146,9 @@ if __name__ == "__main__":
     print("=" * 50 + "\n")
     
     uvicorn.run(
-        "main:app", 
-        host="0.0.0.0", 
-        port=8000, 
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
         reload=True,
         log_level="info"
     )
