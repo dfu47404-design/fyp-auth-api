@@ -1,7 +1,7 @@
 # app/email_service.py - UPDATED FOR RESEND API
 import os
 import logging
-from typing import Tuple, Optional
+from typing import Tuple
 import resend
 
 # Set up logging
@@ -46,16 +46,13 @@ class ResendEmailService:
             }
             
             response = resend.Emails.send(params)
-            
+
             logger.info(f"📊 Resend Response: Email ID: {response.get('id', 'Unknown')}")
             logger.info("✅ Email accepted by Resend for delivery")
             
             return 202, f"Email queued: {response.get('id', 'Unknown')}"
             
-        except resend.ResendError as e:
-            logger.error(f"❌ Resend API Error: {e}")
-            return 500, f"Resend Error: {str(e)}"
-        except Exception as e:
+        except Exception as e:   # ✅ FIXED — Removed resend.ResendError
             logger.error(f"❌ Unexpected error: {e}")
             return 500, f"Unexpected error: {str(e)}"
     
