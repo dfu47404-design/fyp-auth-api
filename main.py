@@ -1,8 +1,7 @@
-﻿# main.py - UPDATED WITH SMTP TEST ENDPOINT
+﻿# main.py - UPDATED WITH RESEND TEST ENDPOINT
 import os
 import sys
 import asyncio
-import socket
 
 # Add current directory to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -84,7 +83,7 @@ async def root():
             "verify_reset": "POST /api/password/verify-token",
             "reset_password": "POST /api/password/reset",
             "health_check": "GET /health",
-            "smtp_test": "GET /test-smtp",
+            "email_test": "GET /test-email-config",
             "docs": "GET /docs",
             "redoc": "GET /redoc"
         }
@@ -100,18 +99,18 @@ async def health_check():
         "version": "1.0.0"
     }
 
-# ✅ ✅ SMTP TEST ENDPOINT (NEW)
-@app.get("/test-smtp")
-async def test_smtp_connection():
-    """Test if SMTP ports are accessible from Render"""
+# ✅ ✅ UPDATED RESEND TEST ENDPOINT
+@app.get("/test-email-config")
+async def test_email_config():
+    """Test email service configuration"""
     results = []
-
+    
+    # Test traditional SMTP ports (likely blocked on Render Free)
     ports_to_test = [
         ("smtp.gmail.com", 587, "Gmail TLS"),
         ("smtp.gmail.com", 465, "Gmail SSL"),
-        ("smtp.sendgrid.net", 587, "SendGrid"),
     ]
-
+    
     for host, port, description in ports_to_test:
         try:
             reader, writer = await asyncio.open_connection(host, port)
@@ -119,9 +118,45 @@ async def test_smtp_connection():
             await writer.wait_closed()
             results.append(f"✅ {description} ({host}:{port}) - ACCESSIBLE")
         except Exception as e:
-            results.append(f"❌ {description} ({host}:{port}) - BLOCKED: {e}")
-
-    return {"smtp_test": results}
+            results.append(f"❌ {description} ({host}:{port}) - BLOCKED: {type(e).__name__}")
+    
+    # Test Resend configuration
+    try:
+        from app.email_service import email_service
+        config = email_service.get_configuration_status()
+        
+        if config["configured"]:
+            results.append(f"✅ Resend API - CONFIGURED ({config['api_key_length']} chars)")
+            results.append(f"✅ From Email: {config['from_email']}")
+            results.append(f"✅ Render Compatible: {config['render_compatible']}")
+            
+            # Test email sending
+            test_result = email_service.send_password_reset_email(
+                to_email="delivered@resend.dev",
+                reset_token="TEST123",
+                user_name="Test User"
+            )
+            
+            if test_result:
+                results.append(f"✅ Test email sent to delivered@resend.dev")
+            else:
+                results.append(f"❌ Test email failed")
+        else:
+            results.append(f"❌ Resend API - NOT CONFIGURED")
+            results.append(f"💡 Set RESEND_API_KEY environment variable")
+    except Exception as e:
+        results.append(f"❌ Resend API check failed: {e}")
+    
+    return {
+        "email_test": results,
+        "recommendation": "Resend API works on Render Free Tier",
+        "test_address": "Use delivered@resend.dev for testing",
+        "current_config": {
+            "has_resend_key": bool(os.getenv("RESEND_API_KEY")),
+            "has_resend_from": bool(os.getenv("RESEND_FROM")),
+            "resend_from_value": os.getenv("RESEND_FROM", "Not set")
+        }
+    }
 
 # ✅ GLOBAL ERROR HANDLER
 @app.exception_handler(Exception)

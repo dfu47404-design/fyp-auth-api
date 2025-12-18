@@ -5,7 +5,7 @@ python-dotenv==1.0.0
 
 # Database
 psycopg2-binary==2.9.9
-sqlalchemy==1.4.50
+sqlalchemy==2.0.23
 
 # Validation
 pydantic==1.10.13
@@ -16,5 +16,8 @@ PyJWT==2.8.0
 passlib[argon2]==1.7.4
 cryptography==41.0.7
 
-# Email
+# Email / File Upload
 python-multipart==0.0.6
+
+# Resend Email API
+resend==2.19.0
