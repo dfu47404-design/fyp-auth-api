@@ -4,7 +4,7 @@ from app.db import engine
 from app.models import Base
 
 print('=' * 60)
-print('DATABASE MIGRATION FOR PASSWORD RESET')
+print('DATABASE MIGRATION FOR PASSWORD RESET + ULCER HISTORY')
 print('=' * 60)
 
 try:
@@ -57,7 +57,16 @@ try:
                 
                 print(f"\n✅ Migration completed! Added {len(missing_columns)} columns")
             else:
-                print("✅ All required columns already exist!")
+                print("✅ All required password reset columns already exist!")
+            
+            # ✅ Add ulcer_history column if missing
+            if 'ulcer_history' not in column_names:
+                print("Adding 'ulcer_history' column...")
+                conn.execute(text("ALTER TABLE users ADD COLUMN ulcer_history JSONB DEFAULT '[]'::JSONB"))
+                conn.commit()
+                print("✅ Added 'ulcer_history' column")
+            else:
+                print("✅ 'ulcer_history' column already exists!")
     
     print('=' * 60)
     print("✅ Database migration completed!")
